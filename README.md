@@ -69,6 +69,7 @@ JobTrawler/
 
 ## Supported Job Boards
 
+### General Job Boards
 - ✅ Indeed (UK & US)
 - ✅ LinkedIn
 - ✅ Reed.co.uk
@@ -78,7 +79,27 @@ JobTrawler/
 - ✅ Adzuna
 - ✅ JobServe
 - ✅ WhatJobs
+- ✅ StepStone
+- ✅ JobRapido
+- ✅ Jooble
+- ✅ EURES
+- ✅ CareerJet
 - ❌ CV-Library (blocked, requires API)
+
+### Charity & Nonprofit Job Boards
+- ✅ CharityJob (UK charity and nonprofit jobs)
+- ✅ Idealist (International nonprofit and social impact jobs)
+- ✅ GlobalCharityJobs (International charity jobs)
+- ✅ ThirdSector (UK charity, nonprofit, and voluntary sector jobs)
+- ✅ GuardianJobs (Includes charity and nonprofit section)
+
+### Environmental & Sustainability Jobs
+- ✅ EnvironmentJobs (Environmental and sustainability jobs)
+
+### Museums, Galleries & Arts Jobs
+- ✅ Museums Association (UK museum and gallery jobs)
+- ✅ ArtsJobs (UK arts, culture, heritage, and creative sector jobs)
+- ✅ ArtsProfessional (UK arts and culture sector jobs)
 
 ## Web Interface Features
 
