@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Trawler - Recent Jobs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-card.active {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border-color: #155724;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .pagination-info {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .pagination-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-size-selector label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .page-size-selector select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .page-size-selector select:hover {
+            border-color: #667eea;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+
+        .jobs-container {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        }
+
+        .job-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .job-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .job-company {
+            font-size: 1.1em;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .job-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .match-score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+
+        .match-score.high {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .match-score.medium {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .match-score.low {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .skill-tag {
+            background: #f0f0f0;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            color: #555;
+        }
+
+        .job-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: auto;
+            transition: transform 0.2s;
+        }
+
+        .job-link:hover {
+            transform: scale(1.05);
+        }
+
+        .source-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .source-indeed {
+            background: #2164f4;
+            color: white;
+        }
+
+        .source-linkedin {
+            background: #0077b5;
+            color: white;
+        }
+
+        .empty-state {
+            background: white;
+            padding: 60px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-state h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .empty-state p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .time-ago {
+            color: #999;
+            font-size: 0.85em;
+        }
+
+        @media (max-width: 768px) {
+            .jobs-container {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+
+        /* Hidden test button - bottom left */
+        #hiddenTestBtn {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(155, 89, 182, 0.1);
+            color: rgba(155, 89, 182, 0.3);
+            border: 1px solid rgba(155, 89, 182, 0.2);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s;
+            opacity: 0.3;
+        }
+
+        #hiddenTestBtn:hover {
+            opacity: 0.7;
+            background: rgba(155, 89, 182, 0.2);
+            color: rgba(155, 89, 182, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Job Trawler</h1>
+            <p class="subtitle">Jobs matching your CV</p>
+            <div class="stats">
+                <div class="stat-card active" id="lastSearchBtn" onclick="showLastSearch()" title="Click to show last search results">
+                    <div>📋 Last Search: <span id="lastSearchCount">{{ recent_jobs_count }}</span></div>
+                </div>
+                <div class="stat-card" id="allJobsBtn" onclick="showAllJobs()" title="Click to show all positions">
+                    <div>📊 All Positions: <span id="allJobsCount">{{ total_jobs }}</span></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 15px;">
+                <button class="refresh-btn" onclick="location.reload(true)">🔄 Refresh Page</button>
+                <button class="refresh-btn" onclick="document.getElementById('cvUploadForm').style.display='block'" style="background: #28a745;">
+                    📄 Upload CV
+                </button>
+                {% if cv_content %}
+                <button class="refresh-btn" onclick="window.open('/view-cv', '_blank')" style="background: #17a2b8;">
+                    👁️ View CV
+                </button>
+                {% endif %}
+                <button class="refresh-btn" onclick="document.getElementById('searchForm').style.display='block'" style="background: #ff6b6b;">
+                    🔍 Search Other Positions
+                </button>
+            </div>
+            
+            <!-- Global Progress Container (always visible when trawler is running) -->
+            <div id="globalProgressContainer" style="display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h3 style="color: #667eea; margin-bottom: 15px;">⏳ Job Trawler Running</h3>
+                <div id="globalSearchStatus" style="display: block; padding: 10px; border-radius: 6px; margin-bottom: 15px; background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;">
+                    Starting trawler...
+                </div>
+                <div id="globalProgressContainerInner" style="margin-top: 15px;">
+                    <div style="background: #e9ecef; border-radius: 10px; height: 30px; position: relative; overflow: hidden; margin-bottom: 10px;">
+                        <div id="globalProgressBar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
+                            <span id="globalProgressText">0%</span>
+                        </div>
+                    </div>
+                    <div id="globalProgressMessage" style="color: #666; font-size: 0.9em; margin-bottom: 8px;"></div>
+                    <div id="globalProgressStats" style="display: flex; gap: 20px; font-size: 0.9em;">
+                        <div style="color: #667eea; font-weight: bold;">
+                            📊 Jobs Found: <span id="globalJobsFoundCount">0</span>
+                        </div>
+                        <div style="color: #28a745; font-weight: bold;">
+                            ✅ Matched: <span id="globalJobsMatchedCount">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Positions Form (hidden by default) -->
+            <div id="searchForm" style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px dashed #667eea;">
+                <form id="searchPositionsForm" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label for="position_keywords" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">Enter position keywords (Optional if LinkedIn URL provided):</label>
+                        <input type="text" id="position_keywords" name="keywords" placeholder="e.g., Data Scientist OR Machine Learning Engineer" 
+                               style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; max-width: 500px; font-size: 14px;">
+                        <small style="color: #666; display: block; margin-top: 5px;">The trawler will search for jobs matching these keywords and compare them with your CV. If you provide a LinkedIn URL, keywords will be extracted from your profile.</small>
+                    </div>
+                    <div>
+                        <label for="linkedin_url" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">LinkedIn Profile URL (Optional):</label>
+                        <input type="url" id="linkedin_url" name="linkedin_url" placeholder="https://www.linkedin.com/in/yourprofile" 
+                               style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; max-width: 500px; font-size: 14px;">
+                        <small style="color: #666; display: block; margin-top: 5px;">Enter your LinkedIn profile URL to extract skills and keywords from your profile. This will be used to find matching jobs.</small>
+                    </div>
+                    <div>
+                        <label for="position_location" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">Select Location (Optional):</label>
+                        <select id="position_location" name="location" 
+                                style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; max-width: 500px; font-size: 14px; background: white;">
+                            <option value="">Use default from config</option>
+                            <option value="Remote">🌍 Remote</option>
+                            <optgroup label="United Kingdom">
+                                <option value="London, UK">London, UK</option>
+                                <option value="Manchester, UK">Manchester, UK</option>
+                                <option value="Birmingham, UK">Birmingham, UK</option>
+                                <option value="Edinburgh, UK">Edinburgh, UK</option>
+                                <option value="Bristol, UK">Bristol, UK</option>
+                                <option value="Leeds, UK">Leeds, UK</option>
+                                <option value="United Kingdom">United Kingdom</option>
+                            </optgroup>
+                            <optgroup label="Germany">
+                                <option value="Berlin, Germany">Berlin, Germany</option>
+                                <option value="Munich, Germany">Munich, Germany</option>
+                                <option value="Hamburg, Germany">Hamburg, Germany</option>
+                                <option value="Frankfurt, Germany">Frankfurt, Germany</option>
+                                <option value="Cologne, Germany">Cologne, Germany</option>
+                                <option value="Germany">Germany</option>
+                            </optgroup>
+                            <optgroup label="France">
+                                <option value="Paris, France">Paris, France</option>
+                                <option value="Lyon, France">Lyon, France</option>
+                                <option value="Marseille, France">Marseille, France</option>
+                                <option value="Toulouse, France">Toulouse, France</option>
+                                <option value="France">France</option>
+                            </optgroup>
+                            <optgroup label="Netherlands">
+                                <option value="Amsterdam, Netherlands">Amsterdam, Netherlands</option>
+                                <option value="Rotterdam, Netherlands">Rotterdam, Netherlands</option>
+                                <option value="The Hague, Netherlands">The Hague, Netherlands</option>
+                                <option value="Utrecht, Netherlands">Utrecht, Netherlands</option>
+                                <option value="Netherlands">Netherlands</option>
+                            </optgroup>
+                            <optgroup label="Spain">
+                                <option value="Madrid, Spain">Madrid, Spain</option>
+                                <option value="Barcelona, Spain">Barcelona, Spain</option>
+                                <option value="Valencia, Spain">Valencia, Spain</option>
+                                <option value="Seville, Spain">Seville, Spain</option>
+                                <option value="Spain">Spain</option>
+                            </optgroup>
+                            <optgroup label="Italy">
+                                <option value="Rome, Italy">Rome, Italy</option>
+                                <option value="Milan, Italy">Milan, Italy</option>
+                                <option value="Turin, Italy">Turin, Italy</option>
+                                <option value="Naples, Italy">Naples, Italy</option>
+                                <option value="Italy">Italy</option>
+                            </optgroup>
+                            <optgroup label="Switzerland">
+                                <option value="Zurich, Switzerland">Zurich, Switzerland</option>
+                                <option value="Geneva, Switzerland">Geneva, Switzerland</option>
+                                <option value="Basel, Switzerland">Basel, Switzerland</option>
+                                <option value="Bern, Switzerland">Bern, Switzerland</option>
+                                <option value="Switzerland">Switzerland</option>
+                            </optgroup>
+                            <optgroup label="Other European Countries">
+                                <option value="Vienna, Austria">Vienna, Austria</option>
+                                <option value="Brussels, Belgium">Brussels, Belgium</option>
+                                <option value="Copenhagen, Denmark">Copenhagen, Denmark</option>
+                                <option value="Helsinki, Finland">Helsinki, Finland</option>
+                                <option value="Dublin, Ireland">Dublin, Ireland</option>
+                                <option value="Oslo, Norway">Oslo, Norway</option>
+                                <option value="Stockholm, Sweden">Stockholm, Sweden</option>
+                                <option value="Warsaw, Poland">Warsaw, Poland</option>
+                                <option value="Lisbon, Portugal">Lisbon, Portugal</option>
+                                <option value="Prague, Czech Republic">Prague, Czech Republic</option>
+                                <option value="Budapest, Hungary">Budapest, Hungary</option>
+                                <option value="Europe">Europe (All Countries)</option>
+                            </optgroup>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 5px;">Select a location to search in, or leave as default to use config.json location.</small>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" id="searchBtn" style="background: #ff6b6b; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                            🔍 Run Trawler with Search
+                        </button>
+                        <button type="button" onclick="document.getElementById('searchForm').style.display='none'" 
+                                style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                    <div id="searchStatus" style="display: none; padding: 10px; border-radius: 6px; margin-top: 10px;"></div>
+                    
+                    <!-- Progress Bar -->
+                    <div id="progressContainer" style="display: none; margin-top: 15px;">
+                        <div style="background: #e9ecef; border-radius: 10px; height: 30px; position: relative; overflow: hidden; margin-bottom: 10px;">
+                            <div id="progressBar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
+                                <span id="progressText">0%</span>
+                            </div>
+                        </div>
+                        <div id="progressMessage" style="color: #666; font-size: 0.9em; margin-bottom: 8px;"></div>
+                        <div id="progressStats" style="display: flex; gap: 20px; font-size: 0.9em;">
+                            <div style="color: #667eea; font-weight: bold;">
+                                📊 Jobs Found: <span id="jobsFoundCount">0</span>
+                            </div>
+                            <div style="color: #28a745; font-weight: bold;">
+                                ✅ Matched: <span id="jobsMatchedCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- CV Upload Form (hidden by default) -->
+            <div id="cvUploadForm" style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px dashed #667eea;">
+                <form id="cvUploadFormElement" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label for="cv_file" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">Select CV File (.txt, .pdf, .doc, .docx):</label>
+                        <input type="file" id="cv_file" name="cv_file" accept=".txt,.pdf,.doc,.docx" required 
+                               style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%; max-width: 400px;">
+                    </div>
+                    <div id="cvUploadStatus" style="display: none; padding: 10px; border-radius: 6px; margin-bottom: 10px;"></div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" id="cvUploadBtn" onclick="uploadCVFile()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                            📤 Upload CV
+                        </button>
+                        <button type="button" id="cvSearchBtn" onclick="startTrawlerFromCV()" 
+                                style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                            🔍 Search Jobs
+                        </button>
+                        <button type="button" onclick="document.getElementById('cvUploadForm').style.display='none'; document.getElementById('cvUploadStatus').style.display='none';" 
+                                style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                    <!-- Progress for CV Search -->
+                    <div id="cvSearchProgress" style="display: none; margin-top: 15px;">
+                        <div style="background: #e9ecef; border-radius: 10px; height: 30px; position: relative; overflow: hidden; margin-bottom: 10px;">
+                            <div id="cvProgressBar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
+                                <span id="cvProgressText">0%</span>
+                            </div>
+                        </div>
+                        <div id="cvProgressMessage" style="color: #666; font-size: 0.9em; margin-bottom: 8px;"></div>
+                        <div id="cvProgressStats" style="display: flex; gap: 20px; font-size: 0.9em;">
+                            <div style="color: #667eea; font-weight: bold;">
+                                📊 Jobs Found: <span id="cvJobsFoundCount">0</span>
+                            </div>
+                            <div style="color: #28a745; font-weight: bold;">
+                                ✅ Matched: <span id="cvJobsMatchedCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <script>
+                // Function to upload CV file via AJAX (keeps form open)
+                function uploadCVFile() {
+                    const fileInput = document.getElementById('cv_file');
+                    const statusDiv = document.getElementById('cvUploadStatus');
+                    const submitBtn = document.getElementById('cvUploadBtn');
+                    const searchBtn = document.getElementById('cvSearchBtn');
+                    
+                    // Check if file is selected
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        statusDiv.style.display = 'block';
+                        statusDiv.style.background = '#f8d7da';
+                        statusDiv.style.color = '#721c24';
+                        statusDiv.style.border = '1px solid #f5c6cb';
+                        statusDiv.textContent = '⚠️ Please select a file first';
+                        return;
+                    }
+                    
+                    // Show uploading status
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = '#d1ecf1';
+                    statusDiv.style.color = '#0c5460';
+                    statusDiv.style.border = '1px solid #bee5eb';
+                    statusDiv.textContent = '⏳ Uploading CV...';
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '⏳ Uploading...';
+                    searchBtn.disabled = true;
+                    
+                    // Create FormData
+                    const formData = new FormData();
+                    formData.append('cv_file', fileInput.files[0]);
+                    
+                    // Upload via AJAX
+                    fetch('/upload-cv', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (response.redirected) {
+                            // If redirected, check for flash messages in the response
+                            return response.text().then(html => {
+                                // Check if there's a success message in the HTML
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const flashMessages = doc.querySelectorAll('.flash-message, .alert');
+                                
+                                let message = 'CV uploaded successfully!';
+                                let isError = false;
+                                
+                                flashMessages.forEach(msg => {
+                                    const text = msg.textContent.trim();
+                                    if (text.includes('successfully')) {
+                                        message = text;
+                                    } else if (text.includes('Error') || text.includes('error') || msg.classList.contains('error')) {
+                                        message = text;
+                                        isError = true;
+                                    }
+                                });
+                                
+                                return { success: !isError, message: message };
+                            });
+                        } else {
+                            return response.json().then(data => {
+                                return { success: data.success || false, message: data.message || 'Upload completed' };
+                            }).catch(() => {
+                                return { success: true, message: 'CV uploaded successfully!' };
+                            });
+                        }
+                    })
+                    .then(result => {
+                        // Show success/error message
+                        if (result.success) {
+                            statusDiv.style.background = '#d4edda';
+                            statusDiv.style.color = '#155724';
+                            statusDiv.style.border = '1px solid #c3e6cb';
+                            statusDiv.textContent = '✅ ' + result.message;
+                            
+                            // Reset file input
+                            fileInput.value = '';
+                            
+                            // Enable search button
+                            searchBtn.disabled = false;
+                        } else {
+                            statusDiv.style.background = '#f8d7da';
+                            statusDiv.style.color = '#721c24';
+                            statusDiv.style.border = '1px solid #f5c6cb';
+                            statusDiv.textContent = '❌ ' + result.message;
+                        }
+                        
+                        // Re-enable upload button
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '📤 Upload CV';
+                    })
+                    .catch(error => {
+                        console.error('Upload error:', error);
+                        statusDiv.style.background = '#f8d7da';
+                        statusDiv.style.color = '#721c24';
+                        statusDiv.style.border = '1px solid #f5c6cb';
+                        statusDiv.textContent = '❌ Error uploading CV: ' + error.message;
+                        
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '📤 Upload CV';
+                        searchBtn.disabled = false;
+                    });
+                }
+                
+                // Function to start trawler from CV upload form
+                function startTrawlerFromCV() {
+                    const searchBtn = document.getElementById('cvSearchBtn');
+                    const progressDiv = document.getElementById('cvSearchProgress');
+                    const progressBar = document.getElementById('cvProgressBar');
+                    const progressText = document.getElementById('cvProgressText');
+                    const progressMessage = document.getElementById('cvProgressMessage');
+                    const jobsFoundSpan = document.getElementById('cvJobsFoundCount');
+                    const jobsMatchedSpan = document.getElementById('cvJobsMatchedCount');
+                    
+                    // Disable button and show progress
+                    searchBtn.disabled = true;
+                    searchBtn.textContent = '⏳ Searching...';
+                    progressDiv.style.display = 'block';
+                    progressBar.style.width = '0%';
+                    progressText.textContent = '0%';
+                    progressMessage.textContent = 'Starting job search...';
+                    jobsFoundSpan.textContent = '0';
+                    jobsMatchedSpan.textContent = '0';
+                    
+                    // Start trawler with config keywords and location
+                    fetch('/search-positions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            keywords: '',  // Empty - will use config
+                            location: '',  // Empty - will use config
+                            linkedin_url: '',
+                            use_config_keywords: true  // Flag to use config keywords
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            progressMessage.textContent = 'Trawler started! Monitoring progress...';
+                            // Start polling progress
+                            pollCVProgress();
+                        } else {
+                            progressMessage.textContent = 'Error: ' + (data.error || 'Failed to start trawler');
+                            searchBtn.disabled = false;
+                            searchBtn.textContent = '🔍 Search Jobs';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error starting trawler:', error);
+                        progressMessage.textContent = 'Error: ' + error.message;
+                        searchBtn.disabled = false;
+                        searchBtn.textContent = '🔍 Search Jobs';
+                    });
+                }
+                
+                // Poll progress for CV search
+                function pollCVProgress() {
+                    const progressBar = document.getElementById('cvProgressBar');
+                    const progressText = document.getElementById('cvProgressText');
+                    const progressMessage = document.getElementById('cvProgressMessage');
+                    const jobsFoundSpan = document.getElementById('cvJobsFoundCount');
+                    const jobsMatchedSpan = document.getElementById('cvJobsMatchedCount');
+                    const searchBtn = document.getElementById('cvSearchBtn');
+                    
+                    fetch('/api/progress')
+                        .then(response => response.json())
+                        .then(progress => {
+                            const percentage = progress.percentage || 0;
+                            progressBar.style.width = percentage + '%';
+                            progressText.textContent = percentage + '%';
+                            progressMessage.textContent = progress.message || 'Processing...';
+                            jobsFoundSpan.textContent = progress.jobs_found || 0;
+                            jobsMatchedSpan.textContent = progress.jobs_matched || 0;
+                            
+                            if (progress.stage === 'complete' || progress.running === false) {
+                                searchBtn.disabled = false;
+                                searchBtn.textContent = '🔍 Search Jobs';
+                                progressMessage.textContent = 'Search complete! Found ' + (progress.jobs_matched || 0) + ' matching jobs.';
+                                // Reload page after 3 seconds to show results
+                                setTimeout(() => {
+                                    location.reload(true);
+                                }, 3000);
+                            } else {
+                                // Continue polling
+                                setTimeout(pollCVProgress, 1000);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error polling progress:', error);
+                            setTimeout(pollCVProgress, 2000);
+                        });
+                }
+            </script>
+            
+            {% if last_updated %}
+            <div style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                Last updated: {{ last_updated.strftime('%Y-%m-%d %H:%M:%S') }}
+            </div>
+            {% endif %}
+            
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div style="margin-top: 15px;">
+                        {% for category, message in messages %}
+                            <div style="padding: 12px; border-radius: 6px; {% if category == 'success' %}background: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% else %}background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </header>
+
+        <!-- Sorting and Pagination Controls -->
+        <div id="sortingControls" class="pagination-controls" style="display: none; margin-bottom: 20px;">
+            <div class="page-size-selector">
+                <label for="sortBySelect"><strong>Sort by:</strong></label>
+                <select id="sortBySelect" onchange="changeSortBy()">
+                    <option value="date_desc">📅 Date (Newest First)</option>
+                    <option value="date_asc">📅 Date (Oldest First)</option>
+                    <option value="score_desc">⭐ Match Score (Highest)</option>
+                    <option value="score_asc">⭐ Match Score (Lowest)</option>
+                    <option value="company_asc">🏢 Company (A-Z)</option>
+                    <option value="company_desc">🏢 Company (Z-A)</option>
+                    <option value="title_asc">📝 Title (A-Z)</option>
+                    <option value="title_desc">📝 Title (Z-A)</option>
+                    <option value="source_asc">🔗 Source (A-Z)</option>
+                    <option value="source_desc">🔗 Source (Z-A)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="paginationControls" class="pagination-controls" style="display: none;">
+            <div class="pagination-info">
+                <span id="paginationInfo">Showing 0-0 of 0 jobs</span>
+            </div>
+            <div class="pagination-buttons" id="paginationButtons">
+                <!-- Buttons will be generated by JavaScript -->
+            </div>
+            <div class="page-size-selector">
+                <label for="pageSizeSelect">Show:</label>
+                <select id="pageSizeSelect" onchange="changePageSize()">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                </select>
+                <label>per page</label>
+            </div>
+        </div>
+
+        <div id="jobsContainer" class="jobs-container">
+        {% if jobs %}
+            {% for job in jobs %}
+            <div class="job-card">
+                <div class="job-title">{{ job.title }}</div>
+                <div class="job-company">{{ job.company }}</div>
+                {% if job.location %}
+                <div class="job-location" style="color: #666; font-size: 0.9em; margin-top: 5px; margin-bottom: 10px;">
+                    📍 {{ job.location }}
+                </div>
+                {% endif %}
+                
+                <div class="job-meta">
+                    <span class="meta-item">
+                        <span class="source-badge source-{{ job.source }}">{{ job.source }}</span>
+                    </span>
+                    <span class="meta-item">
+                        <span class="match-score {{ 'high' if job.match_score >= 0.7 else 'medium' if job.match_score >= 0.5 else 'low' }}">
+                            {{ "%.0f"|format(job.match_score * 100) }}% Match
+                        </span>
+                    </span>
+                    {% if job.hours_ago is defined %}
+                    <span class="meta-item time-ago">
+                        ⏱️ {{ "%.1f"|format(job.hours_ago) }} hours ago
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if job.matched_skills %}
+                <div class="skills-list">
+                    {% for skill in job.matched_skills[:5] %}
+                    <span class="skill-tag">{{ skill }}</span>
+                    {% endfor %}
+                    {% if job.matched_skills|length > 5 %}
+                    <span class="skill-tag">+{{ job.matched_skills|length - 5 }} more</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if job.snippet %}
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 15px; line-height: 1.5;">
+                    {{ job.snippet[:150] }}{% if job.snippet|length > 150 %}...{% endif %}
+                </p>
+                {% endif %}
+
+                {% if job.url %}
+                <a href="{{ job.url }}" target="_blank" class="job-link">
+                    View Job Posting →
+                </a>
+                {% else %}
+                <div style="color: #999; font-size: 0.9em; margin-top: auto;">
+                    URL not available
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h2>No recent jobs found</h2>
+            <p>No jobs have been posted in the last 24 hours that match your criteria.</p>
+            <p style="margin-top: 15px;">Run the job trawler to find new opportunities:</p>
+            <code style="background: #f0f0f0; padding: 10px; border-radius: 5px; display: inline-block; margin-top: 10px;">
+                python job_trawler.py
+            </code>
+        </div>
+        {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Store all jobs data from server
+        const allJobsData = {{ all_jobs|tojson }};
+        const recentJobsData = {{ jobs|tojson }};
+        let currentView = 'last_search'; // 'last_search' or 'all_jobs'
+        let currentPage = 1;
+        let pageSize = 50; // Default page size
+        let currentJobsData = [];
+        let sortBy = 'date_desc'; // Default sort: newest first
+        
+        function showLastSearch() {
+            currentView = 'last_search';
+            currentJobsData = recentJobsData;
+            currentPage = 1;
+            renderJobs();
+            updateButtonStates();
+        }
+        
+        function showAllJobs() {
+            currentView = 'all_jobs';
+            currentJobsData = allJobsData;
+            currentPage = 1;
+            renderJobs();
+            updateButtonStates();
+        }
+        
+        function changePageSize() {
+            const select = document.getElementById('pageSizeSelect');
+            pageSize = parseInt(select.value);
+            currentPage = 1;
+            renderJobs();
+        }
+        
+        function changeSortBy() {
+            const select = document.getElementById('sortBySelect');
+            sortBy = select.value;
+            currentPage = 1; // Reset to first page when sorting changes
+            renderJobs();
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            renderJobs();
+            // Scroll to top of jobs container
+            document.getElementById('jobsContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function updateButtonStates() {
+            const lastSearchBtn = document.getElementById('lastSearchBtn');
+            const allJobsBtn = document.getElementById('allJobsBtn');
+            
+            if (currentView === 'last_search') {
+                lastSearchBtn.classList.add('active');
+                allJobsBtn.classList.remove('active');
+            } else {
+                lastSearchBtn.classList.remove('active');
+                allJobsBtn.classList.add('active');
+            }
+        }
+        
+        function formatJobDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const date = new Date(dateStr);
+                const now = new Date();
+                const hoursAgo = (now - date) / (1000 * 60 * 60);
+                return hoursAgo.toFixed(1);
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        function renderJobs() {
+            const container = document.getElementById('jobsContainer');
+            const paginationControls = document.getElementById('paginationControls');
+            
+            if (!currentJobsData || currentJobsData.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No jobs found</h2>
+                        <p>No jobs match your criteria in this view.</p>
+                    </div>
+                `;
+                paginationControls.style.display = 'none';
+                return;
+            }
+            
+            // Sort jobs based on selected criteria
+            const sortedJobs = [...currentJobsData].sort((a, b) => {
+                switch(sortBy) {
+                    case 'date_desc':
+                        // Newest first (default)
+                        const dateA = new Date(a.date_found || 0);
+                        const dateB = new Date(b.date_found || 0);
+                        return dateB - dateA;
+                    
+                    case 'date_asc':
+                        // Oldest first
+                        const dateA_asc = new Date(a.date_found || 0);
+                        const dateB_asc = new Date(b.date_found || 0);
+                        return dateA_asc - dateB_asc;
+                    
+                    case 'score_desc':
+                        // Highest match score first
+                        const scoreA = a.match_score || 0;
+                        const scoreB = b.match_score || 0;
+                        if (scoreB !== scoreA) return scoreB - scoreA;
+                        // If scores equal, sort by date (newest first)
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                    
+                    case 'score_asc':
+                        // Lowest match score first
+                        const scoreA_asc = a.match_score || 0;
+                        const scoreB_asc = b.match_score || 0;
+                        if (scoreA_asc !== scoreB_asc) return scoreA_asc - scoreB_asc;
+                        // If scores equal, sort by date (newest first)
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                    
+                    case 'company_asc':
+                        // Company A-Z
+                        const companyA = (a.company || '').toLowerCase();
+                        const companyB = (b.company || '').toLowerCase();
+                        if (companyA !== companyB) return companyA.localeCompare(companyB);
+                        // If companies equal, sort by date (newest first)
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                    
+                    case 'company_desc':
+                        // Company Z-A
+                        const companyA_desc = (a.company || '').toLowerCase();
+                        const companyB_desc = (b.company || '').toLowerCase();
+                        if (companyB_desc !== companyA_desc) return companyB_desc.localeCompare(companyA_desc);
+                        // If companies equal, sort by date (newest first)
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                    
+                    case 'title_asc':
+                        // Title A-Z
+                        const titleA = (a.title || '').toLowerCase();
+                        const titleB = (b.title || '').toLowerCase();
+                        if (titleA !== titleB) return titleA.localeCompare(titleB);
+                        // If titles equal, sort by date (newest first)
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                    
+                    case 'title_desc':
+                        // Title Z-A
+                        const titleA_desc = (a.title || '').toLowerCase();
+                        const titleB_desc = (b.title || '').toLowerCase();
+                        if (titleB_desc !== titleA_desc) return titleB_desc.localeCompare(titleA_desc);
+                        // If titles equal, sort by date (newest first)
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                    
+                    case 'source_asc':
+                        // Source A-Z
+                        const sourceA = (a.source || '').toLowerCase();
+                        const sourceB = (b.source || '').toLowerCase();
+                        if (sourceA !== sourceB) return sourceA.localeCompare(sourceB);
+                        // If sources equal, sort by date (newest first)
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                    
+                    case 'source_desc':
+                        // Source Z-A
+                        const sourceA_desc = (a.source || '').toLowerCase();
+                        const sourceB_desc = (b.source || '').toLowerCase();
+                        if (sourceB_desc !== sourceA_desc) return sourceB_desc.localeCompare(sourceA_desc);
+                        // If sources equal, sort by date (newest first)
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                    
+                    default:
+                        // Default: date newest first
+                        return new Date(b.date_found || 0) - new Date(a.date_found || 0);
+                }
+            });
+            
+            // Calculate pagination
+            const totalJobs = sortedJobs.length;
+            const totalPages = Math.ceil(totalJobs / pageSize);
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalJobs);
+            const jobsToShow = sortedJobs.slice(startIndex, endIndex);
+            
+            // Show sorting controls if there are jobs
+            const sortingControls = document.getElementById('sortingControls');
+            if (sortedJobs.length > 0) {
+                sortingControls.style.display = 'flex';
+            } else {
+                sortingControls.style.display = 'none';
+            }
+            
+            // Show pagination controls if more than one page
+            if (totalPages > 1) {
+                paginationControls.style.display = 'flex';
+                updatePaginationInfo(startIndex + 1, endIndex, totalJobs);
+                updatePaginationButtons(currentPage, totalPages);
+            } else {
+                paginationControls.style.display = 'none';
+            }
+            
+            container.innerHTML = jobsToShow.map(job => {
+                const matchScore = Math.round((job.match_score || 0) * 100);
+                const matchClass = matchScore >= 70 ? 'high' : matchScore >= 50 ? 'medium' : 'low';
+                const hoursAgo = formatJobDate(job.date_found);
+                const skills = (job.matched_skills || []).slice(0, 5);
+                const moreSkills = (job.matched_skills || []).length - 5;
+                const snippet = job.snippet || '';
+                const snippetPreview = snippet.length > 150 ? snippet.substring(0, 150) + '...' : snippet;
+                
+                return `
+                    <div class="job-card">
+                        <div class="job-title">${escapeHtml(job.title || 'Untitled')}</div>
+                        <div class="job-company">${escapeHtml(job.company || 'Unknown')}</div>
+                        ${job.location ? `
+                        <div class="job-location" style="color: #666; font-size: 0.9em; margin-top: 5px; margin-bottom: 10px;">
+                            📍 ${escapeHtml(job.location)}
+                        </div>
+                        ` : ''}
+                        
+                        <div class="job-meta">
+                            <span class="meta-item">
+                                <span class="source-badge source-${job.source || 'unknown'}">${job.source || 'unknown'}</span>
+                            </span>
+                            <span class="meta-item">
+                                <span class="match-score ${matchClass}">${matchScore}% Match</span>
+                            </span>
+                            ${hoursAgo ? `<span class="meta-item time-ago">⏱️ ${hoursAgo} hours ago</span>` : ''}
+                        </div>
+
+                        ${skills.length > 0 ? `
+                            <div class="skills-list">
+                                ${skills.map(skill => `<span class="skill-tag">${escapeHtml(skill)}</span>`).join('')}
+                                ${moreSkills > 0 ? `<span class="skill-tag">+${moreSkills} more</span>` : ''}
+                            </div>
+                        ` : ''}
+
+                        ${snippet ? `
+                            <p style="color: #666; font-size: 0.9em; margin-bottom: 15px; line-height: 1.5;">
+                                ${escapeHtml(snippetPreview)}
+                            </p>
+                        ` : ''}
+
+                        ${job.url ? `
+                            <a href="${escapeHtml(job.url)}" target="_blank" class="job-link">
+                                View Job Posting →
+                            </a>
+                        ` : `
+                            <div style="color: #999; font-size: 0.9em; margin-top: auto;">
+                                URL not available
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function updatePaginationInfo(start, end, total) {
+            const infoElement = document.getElementById('paginationInfo');
+            if (infoElement) {
+                infoElement.textContent = `Showing ${start}-${end} of ${total} jobs`;
+            }
+        }
+        
+        function updatePaginationButtons(currentPage, totalPages) {
+            const buttonsContainer = document.getElementById('paginationButtons');
+            if (!buttonsContainer) return;
+            
+            let buttonsHTML = '';
+            
+            // Previous button
+            buttonsHTML += `<button class="pagination-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>`;
+            
+            // Page number buttons
+            const maxButtons = 7; // Show max 7 page buttons
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            
+            // Adjust if we're near the end
+            if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+            
+            // First page button
+            if (startPage > 1) {
+                buttonsHTML += `<button class="pagination-btn" onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) {
+                    buttonsHTML += `<span style="padding: 8px; color: #999;">...</span>`;
+                }
+            }
+            
+            // Page number buttons
+            for (let i = startPage; i <= endPage; i++) {
+                buttonsHTML += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            
+            // Last page button
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    buttonsHTML += `<span style="padding: 8px; color: #999;">...</span>`;
+                }
+                buttonsHTML += `<button class="pagination-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            // Next button
+            buttonsHTML += `<button class="pagination-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>`;
+            
+            buttonsContainer.innerHTML = buttonsHTML;
+        }
+        
+        // Initialize
+        currentJobsData = recentJobsData;
+        updateButtonStates();
+        renderJobs();
+    </script>
+
+    <script>
+        // Check if trawler is running on page load and show progress
+        function checkTrawlerStatus() {
+            fetch('/api/progress')
+                .then(response => response.json())
+                .then(progress => {
+                    if (progress.running || (progress.stage && progress.stage !== 'complete')) {
+                        // Trawler is running, show global progress container
+                        const globalContainer = document.getElementById('globalProgressContainer');
+                        const globalStatusDiv = document.getElementById('globalSearchStatus');
+                        
+                        if (globalContainer) {
+                            globalContainer.style.display = 'block';
+                        }
+                        
+                        if (globalStatusDiv) {
+                            globalStatusDiv.style.display = 'block';
+                            globalStatusDiv.style.background = '#d1ecf1';
+                            globalStatusDiv.style.color = '#0c5460';
+                            globalStatusDiv.style.border = '1px solid #bee5eb';
+                            globalStatusDiv.textContent = 'Trawler is running... Monitoring progress...';
+                        }
+                        
+                        // Also show search form progress if search form is visible
+                        const progressContainer = document.getElementById('progressContainer');
+                        const statusDiv = document.getElementById('searchStatus');
+                        
+                        if (progressContainer && document.getElementById('searchForm').style.display !== 'none') {
+                            progressContainer.style.display = 'block';
+                        }
+                        
+                        if (statusDiv && document.getElementById('searchForm').style.display !== 'none') {
+                            statusDiv.style.display = 'block';
+                            statusDiv.style.background = '#d1ecf1';
+                            statusDiv.style.color = '#0c5460';
+                            statusDiv.style.border = '1px solid #bee5eb';
+                            statusDiv.textContent = 'Trawler is running... Monitoring progress...';
+                        }
+                        
+                        // Start polling for progress
+                        pollProgress();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking trawler status:', error);
+                });
+        }
+        
+        // Function to poll progress (shared between manual search and auto-detection)
+        function pollProgress() {
+            fetch('/api/progress')
+                .then(response => response.json())
+                .then(progress => {
+                    // Update global progress container (for CV upload or page reload)
+                    const globalContainer = document.getElementById('globalProgressContainer');
+                    const globalProgressBar = document.getElementById('globalProgressBar');
+                    const globalProgressText = document.getElementById('globalProgressText');
+                    const globalProgressMessage = document.getElementById('globalProgressMessage');
+                    const globalJobsFoundCount = document.getElementById('globalJobsFoundCount');
+                    const globalJobsMatchedCount = document.getElementById('globalJobsMatchedCount');
+                    const globalStatusDiv = document.getElementById('globalSearchStatus');
+                    
+                    // Update search form progress container (for manual search)
+                    const progressBar = document.getElementById('progressBar');
+                    const progressText = document.getElementById('progressText');
+                    const progressMessage = document.getElementById('progressMessage');
+                    const jobsFoundCount = document.getElementById('jobsFoundCount');
+                    const jobsMatchedCount = document.getElementById('jobsMatchedCount');
+                    const statusDiv = document.getElementById('searchStatus');
+                    
+                    const percentage = progress.percentage || 0;
+                    const message = progress.message || 'Processing...';
+                    const jobsFound = progress.jobs_found || 0;
+                    const jobsMatched = progress.jobs_matched || 0;
+                    
+                    // Update global progress (always visible)
+                    if (globalContainer && globalProgressBar) {
+                        globalContainer.style.display = 'block';
+                        globalProgressBar.style.width = percentage + '%';
+                        if (globalProgressText) globalProgressText.textContent = percentage + '%';
+                        if (globalProgressMessage) globalProgressMessage.textContent = message;
+                        if (globalJobsFoundCount) globalJobsFoundCount.textContent = jobsFound;
+                        if (globalJobsMatchedCount) globalJobsMatchedCount.textContent = jobsMatched;
+                    }
+                    
+                    // Update search form progress (if visible)
+                    if (progressBar) {
+                        progressBar.style.width = percentage + '%';
+                        if (progressText) progressText.textContent = percentage + '%';
+                        if (progressMessage) progressMessage.textContent = message;
+                        if (jobsFoundCount) jobsFoundCount.textContent = jobsFound;
+                        if (jobsMatchedCount) jobsMatchedCount.textContent = jobsMatched;
+                    }
+                    
+                    // Check if complete
+                    if (progress.stage === 'complete' || (!progress.running && progress.stage && progress.stage !== 'starting')) {
+                        // Update global status
+                        if (globalStatusDiv) {
+                            globalStatusDiv.style.background = '#d4edda';
+                            globalStatusDiv.style.color = '#155724';
+                            globalStatusDiv.style.border = '1px solid #c3e6cb';
+                            globalStatusDiv.innerHTML = `✅ Trawler completed! Found ${jobsFound} jobs, ${jobsMatched} matched. <a href="/" style="color: #155724; font-weight: bold;">Refresh page to see results</a>`;
+                        }
+                        
+                        // Update search form status
+                        if (statusDiv) {
+                            statusDiv.style.background = '#d4edda';
+                            statusDiv.style.color = '#155724';
+                            statusDiv.style.border = '1px solid #c3e6cb';
+                            statusDiv.innerHTML = `✅ Trawler completed! Found ${jobsFound} jobs, ${jobsMatched} matched. <a href="/" style="color: #155724; font-weight: bold;">Refresh page to see results</a>`;
+                        }
+                        
+                        // Reload after a delay to show results
+                        setTimeout(function() {
+                            location.reload(true);
+                        }, 3000);
+                    } else if (progress.running !== false) {
+                        // Update status messages
+                        if (globalStatusDiv) {
+                            globalStatusDiv.textContent = 'Trawler is running... Monitoring progress...';
+                        }
+                        if (statusDiv) {
+                            statusDiv.textContent = 'Trawler started! Monitoring progress...';
+                        }
+                        
+                        // Continue polling
+                        setTimeout(pollProgress, 1000); // Poll every second
+                    } else {
+                        // Trawler stopped, hide global container
+                        if (globalContainer) {
+                            globalContainer.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling progress:', error);
+                    // Continue polling even on error
+                    setTimeout(pollProgress, 2000);
+                });
+        }
+        
+        // Check trawler status when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            checkTrawlerStatus();
+        });
+        
+        // Auto-refresh every 5 minutes (force reload, no cache)
+        setTimeout(function() {
+            location.reload(true);
+        }, 300000); // 5 minutes
+
+        // Add cache-busting headers
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.update();
+                }
+            });
+        }
+        
+        // Handle search positions form submission
+        document.getElementById('searchPositionsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const keywords = document.getElementById('position_keywords').value.trim();
+            const location = document.getElementById('position_location').value.trim();
+            const linkedinUrl = document.getElementById('linkedin_url').value.trim();
+            const searchBtn = document.getElementById('searchBtn');
+            const statusDiv = document.getElementById('searchStatus');
+            
+            // Either keywords OR LinkedIn URL must be provided
+            if (!keywords && !linkedinUrl) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.style.border = '1px solid #f5c6cb';
+                statusDiv.textContent = 'Please enter position keywords OR provide a LinkedIn profile URL.';
+                return;
+            }
+            
+            // Disable button and show loading
+            searchBtn.disabled = true;
+            searchBtn.textContent = '⏳ Running Trawler...';
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#d1ecf1';
+            statusDiv.style.color = '#0c5460';
+            statusDiv.style.border = '1px solid #bee5eb';
+            statusDiv.textContent = 'Starting trawler...';
+            
+            // Show progress container
+            const progressContainer = document.getElementById('progressContainer');
+            if (progressContainer) {
+                progressContainer.style.display = 'block';
+            }
+            
+            // Send request to backend
+            fetch('/search-positions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ keywords: keywords, location: location, linkedin_url: linkedinUrl })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.textContent = 'Trawler started! Monitoring progress...';
+                    // Start polling for progress (using the shared function)
+                    pollProgress();
+                } else {
+                    statusDiv.style.background = '#f8d7da';
+                    statusDiv.style.color = '#721c24';
+                    statusDiv.style.border = '1px solid #f5c6cb';
+                    statusDiv.textContent = 'Error: ' + (data.error || 'Unknown error occurred');
+                    if (progressContainer) {
+                        progressContainer.style.display = 'none';
+                    }
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = '🔍 Run Trawler with Search';
+                }
+            })
+            .catch(error => {
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.style.border = '1px solid #f5c6cb';
+                statusDiv.textContent = 'Error: ' + error.message;
+                if (progressContainer) {
+                    progressContainer.style.display = 'none';
+                }
+                searchBtn.disabled = false;
+                searchBtn.textContent = '🔍 Run Trawler with Search';
+            });
+        });
+
+        // Test Job Boards Function with Progress
+        async function testJobBoards() {
+            const btn = document.getElementById('hiddenTestBtn');
+            const testPanel = document.getElementById('testBoardsPanel');
+            
+            // Show panel
+            if (!testPanel) {
+                // Create panel if it doesn't exist
+                const panel = document.createElement('div');
+                panel.id = 'testBoardsPanel';
+                panel.style.cssText = 'display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 2px solid #9b59b6;';
+                panel.innerHTML = `
+                    <h3 style="color: #9b59b6; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        🧪 Testing Job Boards
+                    </h3>
+                    <div id="testBoardsProgress" style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span id="testProgressText" style="color: #666; font-weight: bold;">Starting tests...</span>
+                            <span id="testProgressCount" style="color: #9b59b6; font-weight: bold;">0/9</span>
+                        </div>
+                        <div style="background: #e9ecef; border-radius: 10px; height: 25px; position: relative; overflow: hidden;">
+                            <div id="testProgressBar" style="background: linear-gradient(135deg, #9b59b6 0%, #667eea 100%); height: 100%; width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">
+                                <span id="testProgressPercent">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="testBoardsResults" style="display: block;">
+                        <h4 style="color: #333; margin-bottom: 10px;">Test Results:</h4>
+                        <div id="testResultsList" style="max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+                    <div id="testSummary" style="padding: 15px; background: #f8f9fa; border-radius: 6px; margin-top: 15px; display: none;">
+                        <h4 style="color: #333; margin-bottom: 10px;">Summary:</h4>
+                        <div id="testSummaryContent"></div>
+                    </div>
+                    <button onclick="document.getElementById('testBoardsPanel').style.display='none'" style="margin-top: 15px; background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                        Close
+                    </button>
+                `;
+                document.querySelector('.container header').appendChild(panel);
+            }
+            
+            const panel = document.getElementById('testBoardsPanel');
+            panel.style.display = 'block';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Reset UI
+            btn.disabled = true;
+            btn.textContent = '⏳';
+            
+            const resultsDiv = document.getElementById('testResultsList');
+            resultsDiv.innerHTML = '';
+            document.getElementById('testSummary').style.display = 'none';
+            
+            // Define boards to test
+            const boards = [
+                { name: 'LinkedIn', method: 'search_linkedin' },
+                { name: 'Indeed', method: 'search_indeed' },
+                { name: 'Reed', method: 'search_reed' },
+                { name: 'Monster', method: 'search_monster' },
+                { name: 'Glassdoor', method: 'search_glassdoor' },
+                { name: 'TotalJobs', method: 'search_totaljobs' },
+                { name: 'Adzuna', method: 'search_adzuna' },
+                { name: 'JobServe', method: 'search_jobserve' },
+                { name: 'WhatJobs', method: 'search_whatjobs' },
+                { name: 'StepStone', method: 'search_stepstone' },
+                { name: 'Jobrapido', method: 'search_jobrapido' },
+                { name: 'Jooble', method: 'search_jooble' },
+                { name: 'Infojobs', method: 'search_infojobs' },
+                { name: 'EURES', method: 'search_eures' },
+                { name: 'CareerJet', method: 'search_careerjet' }
+            ];
+            
+            const totalBoards = boards.length;
+            let completed = 0;
+            const results = {};
+            const working = [];
+            const noJobs = [];
+            const failed = [];
+            
+            // Test each board sequentially
+            for (let i = 0; i < boards.length; i++) {
+                const board = boards[i];
+                
+                // Update progress
+                const progress = ((i + 1) / totalBoards) * 100;
+                document.getElementById('testProgressText').textContent = `Testing ${board.name}...`;
+                document.getElementById('testProgressCount').textContent = `${i + 1}/${totalBoards}`;
+                document.getElementById('testProgressBar').style.width = progress + '%';
+                document.getElementById('testProgressPercent').textContent = Math.round(progress) + '%';
+                
+                // Create result placeholder
+                const boardDiv = document.createElement('div');
+                boardDiv.id = `result-${board.name}`;
+                boardDiv.style.cssText = 'padding: 10px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #6c757d; background: #f8f9fa;';
+                boardDiv.innerHTML = `<strong>⏳ ${board.name}</strong>: Testing...`;
+                resultsDiv.appendChild(boardDiv);
+                
+                // Scroll to current test
+                boardDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                try {
+                    // Call API for this specific board
+                    const startTime = Date.now();
+                    const response = await fetch('/api/test-board', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            board: board.method,
+                            keywords: 'Python Developer',
+                            location: 'London, UK'
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                    
+                    completed++;
+                    
+                    if (data.success && data.jobs_found > 0) {
+                        boardDiv.style.background = '#d4edda';
+                        boardDiv.style.borderLeftColor = '#28a745';
+                        boardDiv.innerHTML = `
+                            <strong>✅ ${board.name}</strong>: Found ${data.jobs_found} jobs in ${elapsed}s
+                            ${data.sample_job ? `<br><small style="color: #666;">Sample: ${data.sample_job.title} at ${data.sample_job.company}</small>` : ''}
+                        `;
+                        working.push(board.name);
+                    } else if (data.success && data.jobs_found === 0) {
+                        boardDiv.style.background = '#fff3cd';
+                        boardDiv.style.borderLeftColor = '#ffc107';
+                        boardDiv.innerHTML = `
+                            <strong>⚠️ ${board.name}</strong>: Working but found 0 jobs in ${elapsed}s
+                        `;
+                        noJobs.push(board.name);
+                    } else {
+                        boardDiv.style.background = '#f8d7da';
+                        boardDiv.style.borderLeftColor = '#dc3545';
+                        boardDiv.innerHTML = `
+                            <strong>❌ ${board.name}</strong>: Failed
+                            <br><small style="color: #721c24;">${data.error || 'Unknown error'}</small>
+                        `;
+                        failed.push(board.name);
+                    }
+                    
+                    results[board.name] = data;
+                    
+                } catch (error) {
+                    completed++;
+                    boardDiv.style.background = '#f8d7da';
+                    boardDiv.style.borderLeftColor = '#dc3545';
+                    boardDiv.innerHTML = `
+                        <strong>❌ ${board.name}</strong>: Failed
+                        <br><small style="color: #721c24;">${error.message}</small>
+                    `;
+                    failed.push(board.name);
+                    results[board.name] = { success: false, error: error.message };
+                }
+                
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // Update final progress
+            document.getElementById('testProgressText').textContent = '✅ All tests completed!';
+            document.getElementById('testProgressBar').style.width = '100%';
+            document.getElementById('testProgressPercent').textContent = '100%';
+            
+            // Show summary
+            const summaryDiv = document.getElementById('testSummaryContent');
+            summaryDiv.innerHTML = `
+                <div style="color: #28a745; margin-bottom: 5px;">
+                    ✅ Working (${working.length}): ${working.join(', ') || 'None'}
+                </div>
+                <div style="color: #ffc107; margin-bottom: 5px;">
+                    ⚠️ No Jobs (${noJobs.length}): ${noJobs.join(', ') || 'None'}
+                </div>
+                <div style="color: #dc3545;">
+                    ❌ Failed (${failed.length}): ${failed.join(', ') || 'None'}
+                </div>
+            `;
+            document.getElementById('testSummary').style.display = 'block';
+            
+            // Scroll summary into view
+            document.getElementById('testSummary').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            btn.disabled = false;
+            btn.textContent = '🧪';
+        }
+    </script>
+    
+    <!-- Hidden Test Button - Bottom Left -->
+    <button id="hiddenTestBtn" onclick="testJobBoards()" title="Test Job Boards">
+        🧪
+    </button>
+</body>
+</html>
+

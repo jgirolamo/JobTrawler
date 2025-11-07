@@ -1,0 +1,72 @@
+{
+  "cv_path": "cv.txt",
+  "search": {
+    "keywords": "Python Developer OR Software Engineer OR DevOps Engineer",
+    "location": "London, UK OR Europe OR Remote"
+  },
+  "job_boards": {
+    "indeed": true,
+    "linkedin": true,
+    "reed": true,
+    "monster": true,
+    "glassdoor": true,
+    "totaljobs": true,
+    "cvlibrary": false,
+    "adzuna": true,
+    "jobserve": true,
+    "whatjobs": true,
+    "stepstone": true,
+    "jobrapido": true,
+    "jooble": true,
+    "infojobs": false,
+    "eures": true,
+    "careerjet": true
+  },
+  "apis": {
+    "adzuna": {
+      "enabled": false,
+      "app_id": "",
+      "app_key": "",
+      "use_api_instead_of_scraping": true,
+      "note": "Get free API key at https://developer.adzuna.com/ - 1000 requests/month free"
+    },
+    "infojobs": {
+      "enabled": false,
+      "client_id": "",
+      "client_secret": "",
+      "use_api_instead_of_scraping": true,
+      "note": "Register at https://developer.infojobs.net/ - OAuth 2.0 required"
+    },
+    "apijobs": {
+      "enabled": false,
+      "api_key": "",
+      "note": "Aggregator API covering 4000+ boards (LinkedIn, Indeed, Glassdoor, etc.) - See https://apijobs.dev"
+    },
+    "jsearch": {
+      "enabled": false,
+      "api_key": "",
+      "note": "Google for Jobs aggregator - See https://openwebninja.com/api/jsearch"
+    }
+  },
+  "matching": {
+    "min_score": 0.15,
+    "require_location_match": false
+  },
+  "continuous": false,
+  "check_interval_minutes": 60,
+  "alerts": {
+    "console": true,
+    "file": {
+      "enabled": true,
+      "path": "job_alerts.json"
+    },
+    "email": {
+      "enabled": false,
+      "smtp_server": "smtp.gmail.com",
+      "smtp_port": 587,
+      "sender_email": "your_email@gmail.com",
+      "sender_password": "your_app_password",
+      "recipient_email": "your_email@gmail.com"
+    }
+  }
+}
