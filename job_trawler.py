@@ -2597,8 +2597,11 @@ class JobTrawler:
                         company_elem = card.find(['span', 'div'], class_=lambda x: x and ('employer' in str(x).lower() or 'company' in str(x).lower() or 'charity' in str(x).lower()))
                         
                         title_text = title_elem.get_text(strip=True) if title_elem else ""
-                        # Filter out navigation/UI text
-                        if title_text and len(title_text) > 5 and title_text.lower() not in ['find jobs', 'search', 'browse', 'view all', 'see more', 'job function', 'receive our weekly']:
+                        # Filter out navigation/UI text and false positives
+                        false_positives = ['find jobs', 'search', 'browse', 'view all', 'see more', 'job function', 'receive our weekly',
+                                          'job alertson', 'job alerts', 'subscribe', 'newsletter', 'sign up', 'register',
+                                          'create account', 'log in', 'login', 'browse jobs', 'all jobs', 'view jobs']
+                        if title_text and len(title_text) > 10 and title_text.lower() not in false_positives and not title_text.lower().startswith('job alert'):
                             job = {
                                 'title': title_text,
                                 'company': company_elem.get_text(strip=True) if company_elem else 'Unknown',
@@ -2625,18 +2628,19 @@ class JobTrawler:
         """Search Idealist.org - International nonprofit, charity, and social impact jobs"""
         jobs = []
         
-        # Try multiple URL patterns
+        # Try multiple URL patterns - Idealist uses /search with type parameter
         base_urls = [
-            "https://www.idealist.org/en/search/jobs",
+            "https://www.idealist.org/en/search",
             "https://www.idealist.org/search",
-            "https://www.idealist.org/en/jobs",
-            "https://www.idealist.org/jobs"
+            "https://www.idealist.org/en/opportunities",
+            "https://www.idealist.org/opportunities"
         ]
         
         params_variations = [
+            {'q': keywords, 'type': 'JOB', 'location': location} if location else {'q': keywords, 'type': 'JOB'},
+            {'keywords': keywords, 'type': 'JOB', 'location': location} if location else {'keywords': keywords, 'type': 'JOB'},
             {'q': keywords, 'location': location} if location else {'q': keywords},
-            {'keywords': keywords, 'location': location} if location else {'keywords': keywords},
-            {'query': keywords, 'location': location} if location else {'query': keywords}
+            {'keywords': keywords, 'location': location} if location else {'keywords': keywords}
         ]
         
         headers = {
@@ -2753,8 +2757,11 @@ class JobTrawler:
                         company_elem = card.find(['span', 'div'], class_=lambda x: x and ('employer' in str(x).lower() or 'company' in str(x).lower() or 'organization' in str(x).lower()))
                         
                         title_text = title_elem.get_text(strip=True) if title_elem else ""
-                        # Filter out navigation/UI text
-                        if title_text and len(title_text) > 5 and title_text.lower() not in ['find jobs', 'search', 'browse', 'view all', 'see more', 'job function', 'receive our weekly']:
+                        # Filter out navigation/UI text and false positives
+                        false_positives = ['find jobs', 'search', 'browse', 'view all', 'see more', 'job function', 'receive our weekly',
+                                          'job alertson', 'job alerts', 'subscribe', 'newsletter', 'sign up', 'register',
+                                          'create account', 'log in', 'login', 'browse jobs', 'all jobs', 'view jobs']
+                        if title_text and len(title_text) > 10 and title_text.lower() not in false_positives and not title_text.lower().startswith('job alert'):
                             job = {
                                 'title': title_text,
                                 'company': company_elem.get_text(strip=True) if company_elem else 'Unknown',
@@ -2856,11 +2863,11 @@ class JobTrawler:
         """Search Guardian Jobs - Includes charity and nonprofit section"""
         jobs = []
         
-        # Try multiple URL patterns - Guardian Jobs may require different approach
+        # Try multiple URL patterns - Guardian Jobs uses /search/jobs
         base_urls = [
+            "https://jobs.theguardian.com/search/jobs",
             "https://jobs.theguardian.com/jobs",
-            "https://jobs.theguardian.com/search",
-            "https://jobs.theguardian.com/jobsearch"
+            "https://jobs.theguardian.com"
         ]
         
         params_variations = [
@@ -3194,12 +3201,11 @@ class JobTrawler:
         """Search ThirdSector.co.uk - UK charity, nonprofit, and voluntary sector jobs"""
         jobs = []
         
-        # Try multiple URL patterns
+        # Try multiple URL patterns - ThirdSector uses /jobs with search
         base_urls = [
             "https://www.thirdsector.co.uk/jobs",
-            "https://www.thirdsector.co.uk/jobs/search",
-            "https://www.thirdsector.co.uk/job-search",
-            "https://www.thirdsector.co.uk/careers"
+            "https://www.thirdsector.co.uk/jobs/",
+            "https://www.thirdsector.co.uk/careers/jobs"
         ]
         
         params_variations = [
