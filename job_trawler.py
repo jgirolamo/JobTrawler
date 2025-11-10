@@ -2550,12 +2550,18 @@ class JobTrawler:
         """Search CharityJob.co.uk - UK charity and nonprofit jobs"""
         jobs = []
         
-        base_url = "https://www.charityjob.co.uk/jobs"
+        # Try multiple URL patterns
+        base_urls = [
+            "https://www.charityjob.co.uk/jobs",
+            "https://www.charityjob.co.uk/search-jobs",
+            "https://www.charityjob.co.uk"
+        ]
         
         params_variations = [
             {'keywords': keywords, 'location': location} if location else {'keywords': keywords},
             {'q': keywords, 'l': location} if location else {'q': keywords},
-            {'search': keywords, 'location': location} if location else {'search': keywords}
+            {'search': keywords, 'location': location} if location else {'search': keywords},
+            {}  # Try without params too
         ]
         
         headers = {
@@ -2563,91 +2569,6 @@ class JobTrawler:
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'en-GB,en;q=0.9',
             'Referer': 'https://www.charityjob.co.uk/'
-        }
-        
-        for params in params_variations:
-            try:
-                response = self.session.get(base_url, params=params, headers=headers, timeout=(5, 15), allow_redirects=True)
-                response.raise_for_status()
-                
-                soup = BeautifulSoup(response.content, 'html.parser')
-                
-                job_cards = []
-                job_cards.extend(soup.find_all('div', class_=lambda x: x and 'job' in str(x).lower()))
-                job_cards.extend(soup.find_all('article'))
-                job_cards.extend(soup.find_all('a', href=lambda x: x and '/jobs/' in str(x).lower() or '/job/' in str(x).lower()))
-                job_cards.extend(soup.find_all('div', class_=lambda x: x and 'listing' in str(x).lower()))
-                
-                seen_urls = set()
-                for card in job_cards[:max_results * 2]:
-                    try:
-                        link_elem = card.find('a', href=True) if card.name != 'a' else card
-                        if not link_elem:
-                            continue
-                        
-                        href = link_elem.get('href', '')
-                        if not href or href in seen_urls:
-                            continue
-                        seen_urls.add(href)
-                        
-                        if not href.startswith('http'):
-                            href = f"https://www.charityjob.co.uk{href}" if href.startswith('/') else f"https://www.charityjob.co.uk/jobs/{href}"
-                        
-                        title_elem = card.find(['h2', 'h3', 'h4', 'a'], class_=lambda x: x and ('title' in str(x).lower() or 'job' in str(x).lower())) or card.find(['h2', 'h3', 'h4'])
-                        company_elem = card.find(['span', 'div'], class_=lambda x: x and ('employer' in str(x).lower() or 'company' in str(x).lower() or 'charity' in str(x).lower()))
-                        
-                        title_text = title_elem.get_text(strip=True) if title_elem else ""
-                        # Filter out navigation/UI text and false positives
-                        false_positives = ['find jobs', 'search', 'browse', 'view all', 'see more', 'job function', 'receive our weekly',
-                                          'job alertson', 'job alerts', 'subscribe', 'newsletter', 'sign up', 'register',
-                                          'create account', 'log in', 'login', 'browse jobs', 'all jobs', 'view jobs']
-                        if title_text and len(title_text) > 10 and title_text.lower() not in false_positives and not title_text.lower().startswith('job alert'):
-                            job = {
-                                'title': title_text,
-                                'company': company_elem.get_text(strip=True) if company_elem else 'Unknown',
-                                'url': href,
-                                'source': 'charityjob',
-                                'date_found': datetime.now().isoformat()
-                            }
-                            jobs.append(job)
-                            if len(jobs) >= max_results:
-                                break
-                    except Exception:
-                        continue
-                
-                if len(jobs) > 0:
-                    break
-                    
-            except Exception as e:
-                print(f"CharityJob error: {e}", flush=True)
-                continue
-        
-        return jobs
-    
-    def search_idealist(self, keywords: str, location: str = "", max_results: int = 50) -> List[Dict]:
-        """Search Idealist.org - International nonprofit, charity, and social impact jobs"""
-        jobs = []
-        
-        # Try multiple URL patterns - Idealist uses /search with type parameter
-        base_urls = [
-            "https://www.idealist.org/en/search",
-            "https://www.idealist.org/search",
-            "https://www.idealist.org/en/opportunities",
-            "https://www.idealist.org/opportunities"
-        ]
-        
-        params_variations = [
-            {'q': keywords, 'type': 'JOB', 'location': location} if location else {'q': keywords, 'type': 'JOB'},
-            {'keywords': keywords, 'type': 'JOB', 'location': location} if location else {'keywords': keywords, 'type': 'JOB'},
-            {'q': keywords, 'location': location} if location else {'q': keywords},
-            {'keywords': keywords, 'location': location} if location else {'keywords': keywords}
-        ]
-        
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-GB,en;q=0.9',
-            'Referer': 'https://www.idealist.org/'
         }
         
         for base_url in base_urls:
@@ -2658,13 +2579,179 @@ class JobTrawler:
                     
                     soup = BeautifulSoup(response.content, 'html.parser')
                     
+                    # Comprehensive selectors like Reed
                     job_cards = []
-                    job_cards.extend(soup.find_all('div', class_=lambda x: x and 'job' in str(x).lower() or 'listing' in str(x).lower()))
-                    job_cards.extend(soup.find_all('article'))
-                    job_cards.extend(soup.find_all('a', href=lambda x: x and '/opportunities/' in str(x).lower() or '/jobs/' in str(x).lower()))
                     
+                    # Primary selectors
+                    job_cards.extend(soup.find_all('article', class_=lambda x: x and 'job' in str(x).lower()))
+                    job_cards.extend(soup.find_all('div', class_=lambda x: x and 'job' in str(x).lower()))
+                    job_cards.extend(soup.find_all('div', {'data-job-id': True}))
+                    job_cards.extend(soup.find_all('div', {'data-jobid': True}))
+                    job_cards.extend(soup.find_all('article'))
+                    
+                    # Look for job links directly (like Reed does)
+                    all_links = soup.find_all('a', href=True)
+                    for link in all_links:
+                        href = link.get('href', '')
+                        if href and ('/jobs/' in href.lower() or '/job/' in href.lower()):
+                            # Check if it looks like a job URL (has job ID or title in path)
+                            if any(x in href.lower() for x in ['/job/', '/jobs/', '/vacancy/', '/opportunity/']):
+                                parent = link.find_parent(['article', 'div', 'section', 'li'])
+                                if parent and parent not in job_cards:
+                                    job_cards.append(parent)
+                    
+                    # Additional selectors
+                    job_cards.extend(soup.find_all('div', class_=lambda x: x and 'listing' in str(x).lower()))
+                    job_cards.extend(soup.find_all('li', class_=lambda x: x and 'job' in str(x).lower()))
+                    job_cards.extend(soup.find_all('section', class_=lambda x: x and 'job' in str(x).lower()))
+                    
+                    # Deduplicate by URL
                     seen_urls = set()
-                    for card in job_cards[:max_results * 2]:
+                    unique_cards = []
+                    for card in job_cards[:max_results * 3]:
+                        link_elem = card.find('a', href=True) if card.name != 'a' else card
+                        if link_elem:
+                            url = link_elem.get('href', '')
+                            if url and url not in seen_urls:
+                                seen_urls.add(url)
+                                unique_cards.append(card)
+                                if len(unique_cards) >= max_results * 2:
+                                    break
+                    
+                    for card in unique_cards:
+                        try:
+                            link_elem = card.find('a', href=True) if card.name != 'a' else card
+                            if not link_elem:
+                                continue
+                            
+                            href = link_elem.get('href', '')
+                            if not href:
+                                continue
+                            
+                            if not href.startswith('http'):
+                                href = f"https://www.charityjob.co.uk{href}" if href.startswith('/') else f"https://www.charityjob.co.uk/jobs/{href}"
+                            
+                            # Multiple ways to find title (like Reed)
+                            title_elem = (
+                                card.find('h2', class_=lambda x: x and 'title' in str(x).lower()) or
+                                card.find('h3', class_=lambda x: x and 'title' in str(x).lower()) or
+                                card.find('h2') or
+                                card.find('h3') or
+                                card.find('a', class_=lambda x: x and 'title' in str(x).lower()) or
+                                link_elem
+                            )
+                            
+                            company_elem = (
+                                card.find('span', class_=lambda x: x and ('employer' in str(x).lower() or 'company' in str(x).lower() or 'charity' in str(x).lower())) or
+                                card.find('div', class_=lambda x: x and ('employer' in str(x).lower() or 'company' in str(x).lower() or 'charity' in str(x).lower())) or
+                                card.find('p', class_=lambda x: x and 'company' in str(x).lower())
+                            )
+                            
+                            title_text = title_elem.get_text(strip=True) if title_elem else ""
+                            # Filter out navigation/UI text and false positives
+                            false_positives = ['find jobs', 'search', 'browse', 'view all', 'see more', 'job function', 'receive our weekly',
+                                              'job alertson', 'job alerts', 'subscribe', 'newsletter', 'sign up', 'register',
+                                              'create account', 'log in', 'login', 'browse jobs', 'all jobs', 'view jobs']
+                            if title_text and len(title_text) > 10 and title_text.lower() not in false_positives and not title_text.lower().startswith('job alert'):
+                                job = {
+                                    'title': title_text,
+                                    'company': company_elem.get_text(strip=True) if company_elem else 'Unknown',
+                                    'url': href,
+                                    'source': 'charityjob',
+                                    'date_found': datetime.now().isoformat()
+                                }
+                                jobs.append(job)
+                                if len(jobs) >= max_results:
+                                    break
+                        except Exception:
+                            continue
+                    
+                    if len(jobs) > 0:
+                        return jobs
+                        
+                except Exception as e:
+                    print(f"CharityJob error ({base_url}): {e}", flush=True)
+                    continue
+        
+        return jobs
+    
+    def search_idealist(self, keywords: str, location: str = "", max_results: int = 50) -> List[Dict]:
+        """Search Idealist.org - International nonprofit, charity, and social impact jobs"""
+        jobs = []
+        
+        # Idealist uses JavaScript rendering - try to get main page and look for job links
+        # First visit homepage to establish session
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-GB,en;q=0.9',
+            'Referer': 'https://www.idealist.org/'
+        }
+        
+        # Try to access homepage first
+        try:
+            self.session.get('https://www.idealist.org', headers=headers, timeout=5)
+            time.sleep(0.5)
+        except:
+            pass
+        
+        # Try multiple URL patterns
+        base_urls = [
+            "https://www.idealist.org",
+            "https://www.idealist.org/en",
+        ]
+        
+        # Try without parameters first (just browse all opportunities)
+        params_variations = [
+            {},  # No params - just get all opportunities
+        ]
+        
+        for base_url in base_urls:
+            for params in params_variations:
+                try:
+                    response = self.session.get(base_url, params=params, headers=headers, timeout=(5, 15), allow_redirects=True)
+                    # Don't raise on 404, just try next URL
+                    if response.status_code == 404:
+                        continue
+                    response.raise_for_status()
+                    
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    
+                    # Comprehensive selectors for Idealist
+                    job_cards = []
+                    
+                    # Primary selectors
+                    job_cards.extend(soup.find_all('article', class_=lambda x: x and ('job' in str(x).lower() or 'opportunity' in str(x).lower() or 'listing' in str(x).lower())))
+                    job_cards.extend(soup.find_all('div', class_=lambda x: x and ('job' in str(x).lower() or 'opportunity' in str(x).lower() or 'listing' in str(x).lower())))
+                    job_cards.extend(soup.find_all('article'))
+                    
+                    # Look for opportunity/job links directly
+                    all_links = soup.find_all('a', href=True)
+                    for link in all_links:
+                        href = link.get('href', '')
+                        if href and ('/opportunities/' in href.lower() or '/jobs/' in href.lower() or '/opportunity/' in href.lower()):
+                            parent = link.find_parent(['article', 'div', 'section', 'li'])
+                            if parent and parent not in job_cards:
+                                job_cards.append(parent)
+                    
+                    # Additional selectors
+                    job_cards.extend(soup.find_all('li', class_=lambda x: x and ('job' in str(x).lower() or 'opportunity' in str(x).lower())))
+                    job_cards.extend(soup.find_all('section', class_=lambda x: x and ('job' in str(x).lower() or 'opportunity' in str(x).lower())))
+                    
+                    # Deduplicate by URL
+                    seen_urls = set()
+                    unique_cards = []
+                    for card in job_cards[:max_results * 3]:
+                        link_elem = card.find('a', href=True) if card.name != 'a' else card
+                        if link_elem:
+                            url = link_elem.get('href', '')
+                            if url and url not in seen_urls:
+                                seen_urls.add(url)
+                                unique_cards.append(card)
+                                if len(unique_cards) >= max_results * 2:
+                                    break
+                    
+                    for card in unique_cards:
                         try:
                             link_elem = card.find('a', href=True) if card.name != 'a' else card
                             if not link_elem:
@@ -2962,19 +3049,18 @@ class JobTrawler:
         """Search Museums Association (UK) - Museum and gallery jobs"""
         jobs = []
         
-        # Try multiple URL patterns
+        # Try multiple URL patterns - Museums Association may not use query params
         base_urls = [
-            "https://www.museumsassociation.org/jobs/search",
             "https://www.museumsassociation.org/jobs",
-            "https://www.museumsassociation.org/careers",
-            "https://www.museumsassociation.org/vacancies"
+            "https://www.museumsassociation.org/jobs/",
+            "https://www.museumsassociation.org"
         ]
         
+        # Try without params first (browse all jobs)
         params_variations = [
-            {'keywords': keywords, 'location': location} if location else {'keywords': keywords},
-            {'q': keywords, 'l': location} if location else {'q': keywords},
-            {'search': keywords} if keywords else {},
-            {'query': keywords} if keywords else {}
+            {},  # No params
+            {'q': keywords} if keywords else {},
+            {'search': keywords} if keywords else {}
         ]
         
         headers = {
@@ -3045,19 +3131,18 @@ class JobTrawler:
         """Search ArtsJobs.org.uk - UK arts, culture, heritage, and creative sector jobs"""
         jobs = []
         
-        # Try multiple URL patterns
+        # Try multiple URL patterns - ArtsJobs may not use query params
         base_urls = [
-            "https://www.artsjobs.org.uk/jobs",
-            "https://www.artsjobs.org.uk/search",
             "https://www.artsjobs.org.uk",
+            "https://www.artsjobs.org.uk/jobs",
             "https://www.artsjobs.org.uk/opportunities"
         ]
         
+        # Try without params first (browse all opportunities)
         params_variations = [
-            {'keywords': keywords, 'location': location} if location else {'keywords': keywords},
-            {'q': keywords, 'l': location} if location else {'q': keywords},
-            {'search': keywords} if keywords else {},
-            {'query': keywords} if keywords else {}
+            {},  # No params
+            {'q': keywords} if keywords else {},
+            {'search': keywords} if keywords else {}
         ]
         
         headers = {
@@ -3201,18 +3286,16 @@ class JobTrawler:
         """Search ThirdSector.co.uk - UK charity, nonprofit, and voluntary sector jobs"""
         jobs = []
         
-        # Try multiple URL patterns - ThirdSector uses /jobs with search
+        # Try multiple URL patterns - ThirdSector may not use query params
         base_urls = [
             "https://www.thirdsector.co.uk/jobs",
             "https://www.thirdsector.co.uk/jobs/",
-            "https://www.thirdsector.co.uk/careers/jobs"
+            "https://www.thirdsector.co.uk"
         ]
         
+        # Try without params first (browse all jobs)
         params_variations = [
-            {'keywords': keywords, 'location': location} if location else {'keywords': keywords},
-            {'q': keywords, 'l': location} if location else {'q': keywords},
-            {'search': keywords} if keywords else {},
-            {'query': keywords} if keywords else {}
+            {},  # No params - browse all jobs
         ]
         
         headers = {
@@ -3230,33 +3313,80 @@ class JobTrawler:
                     
                     soup = BeautifulSoup(response.content, 'html.parser')
                     
+                    # Comprehensive selectors for ThirdSector
                     job_cards = []
-                    job_cards.extend(soup.find_all('div', class_=lambda x: x and 'job' in str(x).lower()))
-                    job_cards.extend(soup.find_all('article'))
-                    job_cards.extend(soup.find_all('a', href=lambda x: x and '/job/' in str(x).lower() or '/jobs/' in str(x).lower() or '/vacancy/' in str(x).lower()))
-                    job_cards.extend(soup.find_all('div', class_=lambda x: x and ('listing' in str(x).lower() or 'vacancy' in str(x).lower() or 'position' in str(x).lower())))
                     
+                    # Primary selectors
+                    job_cards.extend(soup.find_all('article', class_=lambda x: x and 'job' in str(x).lower()))
+                    job_cards.extend(soup.find_all('div', class_=lambda x: x and 'job' in str(x).lower()))
+                    job_cards.extend(soup.find_all('div', {'data-job-id': True}))
+                    job_cards.extend(soup.find_all('article'))
+                    
+                    # Look for job links directly
+                    all_links = soup.find_all('a', href=True)
+                    for link in all_links:
+                        href = link.get('href', '')
+                        if href and ('/job/' in href.lower() or '/jobs/' in href.lower() or '/vacancy/' in href.lower()):
+                            parent = link.find_parent(['article', 'div', 'section', 'li', 'tr'])
+                            if parent and parent not in job_cards:
+                                job_cards.append(parent)
+                    
+                    # Additional selectors
+                    job_cards.extend(soup.find_all('div', class_=lambda x: x and ('listing' in str(x).lower() or 'vacancy' in str(x).lower() or 'position' in str(x).lower())))
+                    job_cards.extend(soup.find_all('li', class_=lambda x: x and 'job' in str(x).lower()))
+                    job_cards.extend(soup.find_all('section', class_=lambda x: x and 'job' in str(x).lower()))
+                    job_cards.extend(soup.find_all('tr', class_=lambda x: x and 'job' in str(x).lower()))
+                    
+                    # Deduplicate by URL
                     seen_urls = set()
-                    for card in job_cards[:max_results * 2]:
+                    unique_cards = []
+                    for card in job_cards[:max_results * 3]:
+                        link_elem = card.find('a', href=True) if card.name != 'a' else card
+                        if link_elem:
+                            url = link_elem.get('href', '')
+                            if url and url not in seen_urls:
+                                seen_urls.add(url)
+                                unique_cards.append(card)
+                                if len(unique_cards) >= max_results * 2:
+                                    break
+                    
+                    for card in unique_cards:
                         try:
                             link_elem = card.find('a', href=True) if card.name != 'a' else card
                             if not link_elem:
                                 continue
                             
                             href = link_elem.get('href', '')
-                            if not href or href in seen_urls:
+                            if not href:
                                 continue
-                            seen_urls.add(href)
                             
                             if not href.startswith('http'):
                                 href = f"https://www.thirdsector.co.uk{href}" if href.startswith('/') else f"https://www.thirdsector.co.uk/jobs/{href}"
                             
-                            title_elem = card.find(['h2', 'h3', 'h4', 'a'], class_=lambda x: x and ('title' in str(x).lower())) or card.find(['h2', 'h3', 'h4'])
-                            company_elem = card.find(['span', 'div'], class_=lambda x: x and ('employer' in str(x).lower() or 'company' in str(x).lower() or 'charity' in str(x).lower() or 'organization' in str(x).lower()))
+                            # Multiple ways to find title (like Reed)
+                            title_elem = (
+                                card.find('h2', class_=lambda x: x and 'title' in str(x).lower()) or
+                                card.find('h3', class_=lambda x: x and 'title' in str(x).lower()) or
+                                card.find('h2') or
+                                card.find('h3') or
+                                card.find('h4') or
+                                card.find('a', class_=lambda x: x and 'title' in str(x).lower()) or
+                                link_elem
+                            )
+                            
+                            company_elem = (
+                                card.find('span', class_=lambda x: x and ('employer' in str(x).lower() or 'company' in str(x).lower() or 'charity' in str(x).lower() or 'organization' in str(x).lower())) or
+                                card.find('div', class_=lambda x: x and ('employer' in str(x).lower() or 'company' in str(x).lower() or 'charity' in str(x).lower() or 'organization' in str(x).lower())) or
+                                card.find('p', class_=lambda x: x and 'company' in str(x).lower()) or
+                                card.find('td', class_=lambda x: x and 'company' in str(x).lower())
+                            )
                             
                             title_text = title_elem.get_text(strip=True) if title_elem else ""
-                            # Filter out navigation/UI text
-                            if title_text and len(title_text) > 5 and title_text.lower() not in ['find jobs', 'search', 'browse', 'view all', 'see more', 'job function']:
+                            # Filter out navigation/UI text and false positives
+                            false_positives = ['find jobs', 'search', 'browse', 'view all', 'see more', 'job function',
+                                              'job alertson', 'job alerts', 'subscribe', 'newsletter', 'sign up', 'register',
+                                              'create account', 'log in', 'login', 'browse jobs', 'all jobs', 'view jobs']
+                            if title_text and len(title_text) > 10 and title_text.lower() not in false_positives and not title_text.lower().startswith('job alert'):
                                 job = {
                                     'title': title_text,
                                     'company': company_elem.get_text(strip=True) if company_elem else 'Unknown',
