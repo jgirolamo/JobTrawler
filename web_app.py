@@ -890,12 +890,13 @@ def api_test_boards():
 
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5001))  # Default to 5001 if 5000 is in use
     print("\n" + "="*60)
     print("Job Trawler Web Interface")
     print("="*60)
     print("Starting web server...")
-    print("Open your browser and go to: http://localhost:5000")
+    print(f"Open your browser and go to: http://localhost:{port}")
     print("="*60 + "\n")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=port)
 
 
